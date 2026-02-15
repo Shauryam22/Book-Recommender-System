@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book Recommender System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f4f6f9;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .header {
+      text-align: center;
+      margin: 40px 0 20px 0;
+    }
+    .search-box {
+      max-width: 600px;
+      margin: 0 auto 40px auto;
+      position: relative; /* keeps suggestions aligned */
+    }
+    .book-card {
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: 0.3s;
+      cursor: pointer;
+    }
+    .book-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+    img {
+      height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    .book-info {
+      margin-top: 10px;
+    }
+    .book-info h5 {
+      font-size: 1rem;
+      font-weight: bold;
+    }
+    .book-info p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    /* Autocomplete dropdown */
+    #suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      z-index: 10;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    .list-group-item {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>📚 Book Recommender System</h1>
+    <p>Click on a recommended book or search below:</p>
+  </div>
+
+  <!-- 🔍 Search bar -->
+  <div class="search-box">
+    <form id="searchForm" action="/recommend_books" method="post" class="d-flex">
+      <input type="text" class="form-control me-2" id="searchInput" name="user_input"
+        placeholder="Enter book name or keyword..." autocomplete="off" required
+        value="{{ selected_book if selected_book else '' }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    <div id="suggestions" class="list-group mt-1"></div>
+  </div>
+
+  <!-- 🟡 Show selected book info -->
+  {% if selected_book %}
+  <div class="text-center mb-4">
+    <h5>Showing results based on: <strong>{{ selected_book }}</strong></h5>
+  </div>
+  {% endif %}
+
+  <!-- 📖 Recommended books -->
+  <div class="container">
+    <div class="row">
+      {% for book in data %}
+      <div class="col-md-3 mb-4">
+        <form action="/recommend_books" method="post">
+          <input type="hidden" name="user_input" value="{{ book[0] }}">
+          <div class="book-card" onclick="this.closest('form').submit()">
+            <img src="{{ book[2] }}" class="img-fluid" alt="{{ book[0] }}">
+            <div class="book-info">
+              <h5>{{ book[0] }}</h5>
+              <p>👤 {{ book[1] }}</p>
+            </div>
+          </div>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% raw %}
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("searchInput");
+    const suggestions = document.getElementById("suggestions");
+
+    input.addEventListener("input", () => {
+      const query = input.value.trim();
+      if (query.length < 2) {
+        suggestions.innerHTML = "";
+        return;
+      }
+
+      fetch(`/suggest?q=${query}`)
+        .then(response => response.json())
+        .then(data => {
+          suggestions.innerHTML = "";
+          data.forEach(book => {
+            const item = document.createElement("button");
+            item.classList.add("list-group-item", "list-group-item-action");
+            item.textContent = book;
+            item.onclick = () => {
+              input.value = book;
+              suggestions.innerHTML = "";
+              document.getElementById("searchForm").submit();
+            };
+            suggestions.appendChild(item);
+          });
+        })
+        .catch(err => console.error(err));
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!document.querySelector(".search-box").contains(e.target)) {
+        suggestions.innerHTML = "";
+      }
+    });
+  });
+  </script>
+  {% endraw %}
+</body>
+</html>
